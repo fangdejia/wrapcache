@@ -6,9 +6,9 @@ import time
 import sys
 import hashlib
 try:
-	import cPickle as pickle
+    import cPickle as pickle
 except:
-	import pickle
+    import pickle
 from functools import wraps
 from wrapcache.adapter.CacheException import CacheExpiredException
 from wrapcache.adapter.MemoryAdapter import MemoryAdapter
@@ -22,63 +22,65 @@ Auto cache the Funtion OUTPUT for sometime.
 '''
 
 def _wrap_key(function, args, kws):
-	'''
-	get the key from the function input.
-	'''
-	return hashlib.md5(pickle.dumps((function.__name__, args, kws))).hexdigest()
+    '''
+    get the key from the function input.
+    '''
+    return hashlib.md5(pickle.dumps((function.__name__, args, kws))).hexdigest()
 
 def keyof(function, *args, **kws):
-	'''
-	get the function cache key
-	'''
-	return _wrap_key(function, args, kws)
+    '''
+    get the function cache key
+    '''
+    return _wrap_key(function, args, kws)
 
 def get(key, adapter = MemoryAdapter):
-	'''
-	get the cache value
-	'''
-	try:
-		return pickle.loads(adapter().get(key))
-	except CacheExpiredException:
-		return None
+    '''
+    get the cache value
+    '''
+    try:
+        return pickle.loads(adapter().get(key))
+    except CacheExpiredException:
+        return None
 
 def remove(key, adapter = MemoryAdapter):
-	'''
-	remove cache by key 
-	'''
-	return pickle.loads(adapter().remove(key))
+    '''
+    remove cache by key
+    '''
+    return pickle.loads(adapter().remove(key))
 
 def set(key, value, timeout = -1, adapter = MemoryAdapter):
-	'''
-	set cache by code, must set timeout length
-	'''
-	if adapter(timeout = timeout).set(key, pickle.dumps(value)):
-		return value
-	else:
-		return None
+    '''
+    set cache by code, must set timeout length
+    '''
+    if adapter(timeout = timeout).set(key, pickle.dumps(value)):
+        return value
+    else:
+        return None
 
 def flush(adapter = MemoryAdapter):
-	'''
-	clear all the caches
-	'''
-	return adapter().flush()
+    '''
+    clear all the caches
+    '''
+    return adapter().flush()
 
 
-def wrapcache(timeout = -1, adapter = MemoryAdapter):
-	'''
-	the Decorator to cache Function.
-	'''
-	def _wrapcache(function):
-		@wraps(function)
-		def __wrapcache(*args, **kws):
-			hash_key = _wrap_key(function, args, kws)
-			try:
-				adapter_instance = adapter()
-				return pickle.loads(adapter_instance.get(hash_key))
-			except CacheExpiredException:
-				#timeout
-				value = function(*args, **kws)
-				set(hash_key, value, timeout, adapter)
-				return value
-		return __wrapcache
-	return _wrapcache
+def wrapcache(timeout = -1, adapter = MemoryAdapter,cache_filter=None):
+    '''
+    the Decorator to cache Function,if cache filter is true,then not cache
+    '''
+    def _wrapcache(function):
+        @wraps(function)
+        def __wrapcache(*args, **kws):
+            if cache_filter and cache_filter(*args,**kws):
+                return function(*args, **kws)
+            hash_key = _wrap_key(function, args, kws)
+            try:
+                adapter_instance = adapter()
+                return pickle.loads(adapter_instance.get(hash_key))
+            except CacheExpiredException:
+                #timeout
+                value = function(*args, **kws)
+                set(hash_key, value, timeout, adapter)
+                return value
+        return __wrapcache
+    return _wrapcache

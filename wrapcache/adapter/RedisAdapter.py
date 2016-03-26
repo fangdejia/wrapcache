@@ -39,48 +39,48 @@ class RedisAdapter(BaseAdapter):
 
 	def flush(self):
 		self._check_db_instanse()
-		RedisAdapter.db.flushdb() 
+		RedisAdapter.db.flushdb()
 		return True
 
 if __name__ == '__main__':
 	import unittest, redis, time
 	from redis.exceptions import ConnectionError
-	
+
 	class TestCase(unittest.TestCase):
 		def setUp(self):
 			#init redis instance
 			self.test_class = RedisAdapter(timeout = 3)
 		def tearDown(self):
 			pass
-		
+
 		def test_memory_adapter(self):
 			# test redis error
 			self.assertRaises(DBNotSetException, self.test_class.get, 'test_key')
-			
+
 			REDIS_CACHE_POOL = redis.ConnectionPool(host = '162.211.225.208', port = 6739, password = '123456', db = 2)
 			REDIS_CACHE_INST = redis.Redis(connection_pool = REDIS_CACHE_POOL, charset = 'utf8')
 			RedisAdapter.db = REDIS_CACHE_INST #初始化装饰器缓存
 			self.assertRaises(ConnectionError, self.test_class.get, 'test_key')
-			
+
 			REDIS_CACHE_POOL = redis.ConnectionPool(host = '162.211.225.209', port = 6739, password = 'wzwacxl', db = 2)
 			REDIS_CACHE_INST = redis.Redis(connection_pool = REDIS_CACHE_POOL, charset = 'utf8')
 			RedisAdapter.db = REDIS_CACHE_INST #初始化装饰器缓存
-			
+
 			key = 'test_key_1'
 			value = str(time.time())
-			
+
 			#test set / get
 			self.test_class.set(key, value)
 			self.assertEqual(self.test_class.get(key).decode('utf-8'), value)
-			
+
 			#test remove
 			self.test_class.set(key, value)
 			self.test_class.remove(key)
 			self.assertRaises(CacheExpiredException, self.test_class.get, key)
-			
+
 			#test flush
 			self.test_class.set(key, value)
 			self.test_class.flush()
 			self.assertRaises(CacheExpiredException, self.test_class.get, key)
-			
+
 	unittest.main()
